@@ -475,6 +475,7 @@ class Generator(nn.Module):
             ]
         )
 
+        
         self.to_rgb = nn.ModuleList(
             [
                 EqualConv2d(512, 3, 1),
@@ -504,7 +505,7 @@ class Generator(nn.Module):
                 
             if eval_mode:
                 out = conv(out,style[2*i],pix[2*i],style[2*i+1],pix[2*i+1])
-            else:
+            else:   
                 out = conv(out,style,pix)
             if i == step:
                 out = to_rgb(out)
@@ -570,6 +571,7 @@ class Discriminator(nn.Module):
     def __init__(self, fused=True, from_rgb_activate=False):
         super().__init__()
 
+        
         self.progression = nn.ModuleList(
             [
                 ConvBlock(16, 32, 3, 1, downsample=True, fused=fused),  # 512
@@ -583,7 +585,7 @@ class Discriminator(nn.Module):
                 ConvBlock(513, 512, 3, 1, 4, 0),
             ]
         )
-
+        
         def make_from_rgb(out_channel):
             if from_rgb_activate:
                 return nn.Sequential(EqualConv2d(3, out_channel, 1), nn.LeakyReLU(0.2))
@@ -591,6 +593,7 @@ class Discriminator(nn.Module):
             else:
                 return EqualConv2d(3, out_channel, 1)
 
+        
         self.from_rgb = nn.ModuleList(
             [
                 make_from_rgb(16),
@@ -604,24 +607,30 @@ class Discriminator(nn.Module):
                 make_from_rgb(512),
             ]
         )
-
+        
+        
         # self.blur = Blur()
 
         self.n_layer = len(self.progression)
 
         self.linear = EqualLinear(512, 1)
+        #self.linear = EqualLinear(256, 1)
 
     def forward(self, input, step=0, alpha=-1):
+        #print(input.shape)
         for i in range(step, -1, -1):
             index = self.n_layer - i - 1
 
             if i == step:
                 out = self.from_rgb[index](input)
+                #print(input.shape)
 
             if i == 0:
                 out_std = torch.sqrt(out.var(0, unbiased=False) + 1e-8)
                 mean_std = out_std.mean()
                 mean_std = mean_std.expand(out.size(0), 1, 4, 4)
+                #print(mean_std.shape)
+                #print(out.shape)
                 out = torch.cat([out, mean_std], 1)
 
             out = self.progression[index](out)

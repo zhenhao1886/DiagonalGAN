@@ -5,6 +5,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 import os
 import torchvision.transforms as transforms
+import torchvision.transforms.functional as F2
 import random
 import torch
 
@@ -36,6 +37,36 @@ class MultiResolutionDataset(Dataset):
         img = Image.open(self.imglist[index])
         img = self.transform(img)
 
+        return img
+
+class SquarePad:
+    def __call__(self, image):
+        max_wh = max(image.size)
+        p_left, p_top = [(max_wh - s) // 2 for s in image.size]
+        p_right, p_bottom = [max_wh - (s+pad) for s, pad in zip(image.size, [p_left, p_top])]
+        padding = (p_left, p_top, p_right, p_bottom)
+        return F2.pad(image, padding, 0, 'constant')
+
+class IrisDataset(Dataset):
+    def __init__(self, img_dir = '../images', resolution = 8):
+        super(IrisDataset, self).__init__()
+        self.img_dir = img_dir
+        self.imgs = [x for x in os.listdir(img_dir) if x[-4:] == 'tiff']
+        self.transforms = transforms.Compose([
+            SquarePad(),
+            transforms.Resize(resolution),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5], inplace=True)
+        ])
+        self.resolution = resolution
+        
+    def __len__(self):
+        return len(self.imgs)
+    
+    def __getitem__(self, i):
+        img_path = os.path.join(self.img_dir, self.imgs[i])
+        img = Image.open(img_path)
+        img = self.transforms(img)
         return img
 
 class MultiLabelResolutionDataset(Dataset):

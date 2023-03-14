@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
 #import cudnn
 
-from dataset import MultiResolutionDataset
+from dataset import MultiResolutionDataset, IrisDataset
 from model import StyledGenerator, Discriminator
 
 
@@ -38,6 +38,12 @@ def sample_data(batch_size, path,image_size=4):
 
     return loader
 
+def sample_data_2(batch_size, path, image_size=4):
+    dataset = IrisDataset(path, resolution=image_size)
+    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=4, drop_last=True)
+
+    return loader
+
 
 def adjust_lr(optimizer, lr):
     for group in optimizer.param_groups:
@@ -51,8 +57,8 @@ def train(args, generator, discriminator):
         step = args.resume_step
         
     resolution = 4 * 2 ** step
-        
-    loader = sample_data( args.batch.get(resolution,args.batch_default),args.datapath, resolution
+    
+    loader = sample_data_2( args.batch.get(resolution,args.batch_default),args.datapath, resolution
     )
     data_loader = iter(loader)
 
@@ -286,6 +292,7 @@ def train(args, generator, discriminator):
 
 if __name__ == '__main__':
     code_size = 512
+    #code_size=256
     n_critic = 1
     
     parser = argparse.ArgumentParser(description='Diagonal GAN')
@@ -370,6 +377,6 @@ if __name__ == '__main__':
 
     args.gen_sample = {512: (8, 4), 1024: (4, 2)}
 
-    args.batch_default = 8
+    args.batch_default = 2
     
     train(args,generator, discriminator)
